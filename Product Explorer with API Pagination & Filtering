@@ -1,0 +1,124 @@
+Product Explorer Web App
+Tech Stack: HTML, CSS, JavaScript (ES6), Fetch API, LocalStorage, URL Params
+
+Project Structure
+📂 product-explorer
+ ┣ 📂 assets (images/icons if needed)
+ ┣ 📂 css (stylesheets)
+ ┣ 📂 js (scripts)
+ ┣ 📜 index.html (main page)
+ ┣ 📜 README.md (documentation)
+
+
+Implementation
+1️⃣ Fetch & Display Products
+We fetch data from the API and dynamically render product cards.
+
+const API_URL = "https://fakestoreapi.com/products";
+const productContainer = document.getElementById("product-list");
+
+async function fetchProducts() {
+    try {
+        const response = await fetch(API_URL);
+        const products = await response.json();
+        return products;
+    } catch (error) {
+        console.error("Error fetching products:", error);
+    }
+}
+
+async function renderProducts(page = 1, sortOption = "", categoryFilter = "", searchQuery = "") {
+    let products = await fetchProducts();
+
+    // Filtering by category
+    if (categoryFilter) {
+        products = products.filter(product => product.category.toLowerCase() === categoryFilter.toLowerCase());
+    }
+
+    // Sorting
+    if (sortOption === "priceLow") {
+        products.sort((a, b) => a.price - b.price);
+    } else if (sortOption === "priceHigh") {
+        products.sort((a, b) => b.price - a.price);
+    } else if (sortOption === "title") {
+        products.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    // Search filtering with debouncing
+    if (searchQuery) {
+        products = products.filter(product => product.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    }
+
+    // Pagination setup
+    const perPage = 8;
+    const totalPages = Math.ceil(products.length / perPage);
+    const start = (page - 1) * perPage;
+    const paginatedProducts = products.slice(start, start + perPage);
+
+    productContainer.innerHTML = paginatedProducts.map(product => `
+        <div class="product-card">
+            <img src="${product.image}" alt="${product.title}">
+            <h2>${product.title}</h2>
+            <p>${product.category}</p>
+            <p>$${product.price.toFixed(2)}</p>
+        </div>
+    `).join("");
+
+    document.getElementById("page-number").textContent = `Page ${page} of ${totalPages}`;
+
+    localStorage.setItem("currentPage", page);
+}
+
+
+2️⃣ Pagination
+
+document.getElementById("next").addEventListener("click", () => {
+    let currentPage = parseInt(localStorage.getItem("currentPage")) || 1;
+    renderProducts(currentPage + 1);
+});
+
+document.getElementById("prev").addEventListener("click", () => {
+    let currentPage = parseInt(localStorage.getItem("currentPage")) || 1;
+    if (currentPage > 1) renderProducts(currentPage - 1);
+});
+
+
+3️⃣ Sorting & Filtering
+
+document.getElementById("sort").addEventListener("change", (event) => {
+    const selectedSort = event.target.value;
+    renderProducts(1, selectedSort);
+});
+
+document.getElementById("category").addEventListener("change", (event) => {
+    const selectedCategory = event.target.value;
+    renderProducts(1, "", selectedCategory);
+});
+
+
+4️⃣ Search with Debouncing
+
+let debounceTimer;
+
+document.getElementById("search").addEventListener("input", (event) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        renderProducts(1, "", "", event.target.value);
+    }, 1000);
+});
+
+
+5️⃣ Styling
+
+.product-card {
+    width: 200px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+.product-card img {
+    width: 100px;
+    height: 100px;
+}
+
+
